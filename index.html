@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Typing Defender</title>
+  <style>
+    body {
+      margin: 0;
+      background-color: #111;
+      color: #0f0;
+      font-family: monospace;
+      overflow: hidden;
+    }
+
+    #game-area {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+    }
+
+    .virus {
+      position: absolute;
+      color: red;
+      font-size: 20px;
+      font-weight: bold;
+    }
+
+    #hud {
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      text-align: center;
+      font-size: 18px;
+    }
+
+    #input {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 20px;
+      color: white;
+    }
+
+    #start-screen {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+    }
+
+    #start-btn {
+      margin-top: 20px;
+      padding: 10px 20px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div id="game-area">
+    <div id="hud">
+      Score: <span id="score">0</span> | Lives: <span id="lives">3</span>
+    </div>
+    <div id="input"></div>
+    <div id="start-screen">
+      <h1>Typing Defender</h1>
+      <p>Type the falling words before they reach the bottom!</p>
+      <button id="start-btn">Start Game</button>
+    </div>
+  </div>
+
+  <script>
+    const words = ["code", "virus", "html", "style", "script", "defend", "hack", "data", "core", "crash"];
+    const gameArea = document.getElementById("game-area");
+    const scoreEl = document.getElementById("score");
+    const livesEl = document.getElementById("lives");
+    const inputEl = document.getElementById("input");
+    const startScreen = document.getElementById("start-screen");
+    const startBtn = document.getElementById("start-btn");
+
+    let activeWords = [];
+    let typed = "";
+    let score = 0;
+    let lives = 3;
+    let gameInterval;
+    let wordInterval;
+
+    function createWord() {
+      const word = words[Math.floor(Math.random() * words.length)];
+      const span = document.createElement("span");
+      span.className = "virus";
+      span.textContent = word;
+      span.style.left = Math.random() * (window.innerWidth - 100) + "px";
+      span.dataset.word = word;
+      span.style.top = "0px";
+      gameArea.appendChild(span);
+      activeWords.push(span);
+    }
+
+    function updateWords() {
+      activeWords.forEach((word, index) => {
+        let top = parseFloat(word.style.top);
+        word.style.top = (top + 2) + "px";
+        if (top + 20 >= window.innerHeight) {
+          gameArea.removeChild(word);
+          activeWords.splice(index, 1);
+          lives--;
+          livesEl.textContent = lives;
+          if (lives <= 0) endGame();
+        }
+      });
+    }
+
+    function startGame() {
+      score = 0;
+      lives = 3;
+      typed = "";
+      scoreEl.textContent = score;
+      livesEl.textContent = lives;
+      inputEl.textContent = "";
+      activeWords.forEach(w => w.remove());
+      activeWords = [];
+      startScreen.style.display = "none";
+
+      gameInterval = setInterval(updateWords, 50);
+      wordInterval = setInterval(createWord, 1500);
+    }
+
+    function endGame() {
+      clearInterval(gameInterval);
+      clearInterval(wordInterval);
+      alert("Game Over! Your score: " + score);
+      startScreen.style.display = "block";
+    }
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key.length === 1 && /[a-zA-Z]/.test(e.key)) {
+        typed += e.key.toLowerCase();
+        inputEl.textContent = typed;
+
+        activeWords.forEach((word, index) => {
+          if (word.dataset.word === typed) {
+            gameArea.removeChild(word);
+            activeWords.splice(index, 1);
+            score += 10;
+            scoreEl.textContent = score;
+            typed = "";
+            inputEl.textContent = "";
+          }
+        });
+      } else if (e.key === "Backspace") {
+        typed = typed.slice(0, -1);
+        inputEl.textContent = typed;
+      }
+    });
+
+    startBtn.addEventListener("click", startGame);
+  </script>
+</body>
+</html>
