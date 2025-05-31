@@ -3,118 +3,172 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Escape the Beam</title>
+  <title>FSM Puzzle</title>
   <style>
     body {
       margin: 0;
-      background: #111;
-      color: white;
       font-family: sans-serif;
+      background: #1a1a1a;
+      color: #fff;
       display: flex;
       flex-direction: column;
       align-items: center;
+      padding: 20px;
+    }
+    #grid {
+      display: grid;
+      grid-template-columns: repeat(5, 50px);
+      grid-template-rows: repeat(5, 50px);
+      gap: 2px;
+      margin: 20px;
+    }
+    .cell {
+      width: 50px;
+      height: 50px;
+      background: #333;
+      display: flex;
+      align-items: center;
       justify-content: center;
-      height: 100vh;
-      overflow: hidden;
     }
-
-    #game-area {
-      position: relative;
-      width: 400px;
-      height: 400px;
-      background: #222;
-      border-radius: 50%;
-      overflow: hidden;
-      border: 5px solid #444;
-    }
-
-    #player {
-      position: absolute;
-      width: 20px;
-      height: 20px;
+    .agent {
       background: lime;
-      border-radius: 50%;
     }
-
-    #beam {
-      position: absolute;
-      width: 4px;
-      height: 200px;
-      background: red;
-      left: 198px;
-      top: 0;
-      transform-origin: bottom center;
+    .goal {
+      background: gold;
     }
-
-    #score {
-      margin-bottom: 10px;
-      font-size: 18px;
+    #fsm-controls {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      max-width: 400px;
+    }
+    #fsm-controls textarea {
+      width: 100%;
+      height: 100px;
+    }
+    button {
+      padding: 10px;
+      background: #444;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #666;
     }
   </style>
 </head>
 <body>
-  <h1>🌪️ Escape the Beam</h1>
-  <div id="score">Time: 0</div>
-  <div id="game-area">
-    <div id="beam"></div>
-    <div id="player"></div>
+  <h1>🤖 FSM Puzzle</h1>
+  <div id="grid"></div>
+  <div id="fsm-controls">
+    <label for="instructions">Define your FSM (e.g. "A:empty→right:B")</label>
+    <textarea id="instructions"></textarea>
+    <button id="run">Run FSM</button>
   </div>
 
   <script>
-    const gameArea = document.getElementById('game-area');
-    const beam = document.getElementById('beam');
-    const player = document.getElementById('player');
-    const scoreDisplay = document.getElementById('score');
+    const gridEl = document.getElementById('grid');
+    const instructionsEl = document.getElementById('instructions');
+    const runBtn = document.getElementById('run');
 
-    let angle = 0;
-    let time = 0;
-    let speed = 0.5;
-    let radius = 180;
-    let playerX = 200, playerY = 200;
+    const gridSize = 5;
+    const grid = [];
+    let agent = { x: 0, y: 0, state: 'A' };
+    const goal = { x: 4, y: 4 };
 
-    function rotateBeam() {
-      angle += speed;
-      beam.style.transform = `rotate(${angle}deg)`;
-      checkCollision();
-    }
-
-    function movePlayer(dx, dy) {
-      playerX = Math.max(10, Math.min(390, playerX + dx));
-      playerY = Math.max(10, Math.min(390, playerY + dy));
-      player.style.left = `${playerX - 10}px`;
-      player.style.top = `${playerY - 10}px`;
-    }
-
-    function checkCollision() {
-      const bx = 200 + radius * Math.sin(angle * Math.PI / 180);
-      const by = 200 - radius * Math.cos(angle * Math.PI / 180);
-      const dx = bx - playerX;
-      const dy = by - playerY;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-      if (dist < 15) {
-        alert("💥 You got hit! Time survived: " + time + "s");
-        location.reload();
+    function createGrid() {
+      gridEl.innerHTML = '';
+      for (let y = 0; y < gridSize; y++) {
+        for (let x = 0; x < gridSize; x++) {
+          const div = document.createElement('div');
+          div.classList.add('cell');
+          if (x === agent.x && y === agent.y) div.classList.add('agent');
+          if (x === goal.x && y === goal.y) div.classList.add('goal');
+          gridEl.appendChild(div);
+          grid.push({ x, y, el: div });
+        }
       }
     }
 
-    document.addEventListener('keydown', e => {
-      if (e.key === 'ArrowUp') movePlayer(0, -10);
-      if (e.key === 'ArrowDown') movePlayer(0, 10);
-      if (e.key === 'ArrowLeft') movePlayer(-10, 0);
-      if (e.key === 'ArrowRight') movePlayer(10, 0);
+    function getCell(x, y) {
+      return grid.find(c => c.x === x && c.y === y);
+    }
+
+    function parseInstructions() {
+      const lines = instructionsEl.value.split('\n');
+      const fsm = {};
+      for (const line of lines) {
+        const match = line.match(/(\w+):(\w+)[→->](\w+):(\w+)/);
+        if (match) {
+          const [_, state, condition, direction, next] = match;
+          fsm[state] = fsm[state] || [];
+          fsm[state].push({ condition, direction, next });
+        }
+      }
+      return fsm;
+    }
+
+    function getCondition(x, y) {
+      if (x < 0 || y < 0 || x >= gridSize || y >= gridSize) return 'wall';
+      if (x === goal.x && y === goal.y) return 'goal';
+      return 'empty';
+    }
+
+    function move(dir) {
+      const dx = dir === 'left' ? -1 : dir === 'right' ? 1 : 0;
+      const dy = dir === 'up' ? -1 : dir === 'down' ? 1 : 0;
+      const newX = agent.x + dx;
+      const newY = agent.y + dy;
+      if (getCondition(newX, newY) !== 'wall') {
+        agent.x = newX;
+        agent.y = newY;
+      }
+    }
+
+    function step(fsm) {
+      const rules = fsm[agent.state];
+      if (!rules) return false;
+      const condition = getCondition(agent.x, agent.y);
+      for (const rule of rules) {
+        if (rule.condition === condition || rule.condition === 'any') {
+          move(rule.direction);
+          agent.state = rule.next;
+          return true;
+        }
+      }
+      return false;
+    }
+
+    function runFSM() {
+      const fsm = parseInstructions();
+      let steps = 0;
+      const interval = setInterval(() => {
+        if (!step(fsm) || (agent.x === goal.x && agent.y === goal.y)) {
+          clearInterval(interval);
+          createGrid();
+          if (agent.x === goal.x && agent.y === goal.y) {
+            alert("🎉 Goal reached in state " + agent.state);
+          } else {
+            alert("🛑 FSM halted.");
+          }
+        } else {
+          createGrid();
+        }
+        if (++steps > 100) {
+          clearInterval(interval);
+          alert("❌ FSM ran too long.");
+        }
+      }, 400);
+    }
+
+    runBtn.addEventListener('click', () => {
+      agent = { x: 0, y: 0, state: 'A' };
+      createGrid();
+      runFSM();
     });
 
-    setInterval(() => {
-      rotateBeam();
-    }, 20);
-
-    setInterval(() => {
-      time++;
-      scoreDisplay.textContent = `Time: ${time}`;
-      speed += 0.01;
-    }, 1000);
-
-    movePlayer(0, 0);
+    createGrid();
   </script>
 </body>
 </html>
