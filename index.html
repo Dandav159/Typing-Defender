@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Balance Bubbles</title>
+  <title>Escape the Beam</title>
   <style>
     body {
       margin: 0;
-      font-family: sans-serif;
-      background: #1e1e2f;
+      background: #111;
       color: white;
+      font-family: sans-serif;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -20,112 +20,101 @@
 
     #game-area {
       position: relative;
-      width: 300px;
-      height: 500px;
-      background: #2e2e3f;
-      border: 4px solid #444;
+      width: 400px;
+      height: 400px;
+      background: #222;
+      border-radius: 50%;
       overflow: hidden;
+      border: 5px solid #444;
     }
 
-    .bubble {
+    #player {
       position: absolute;
+      width: 20px;
+      height: 20px;
+      background: lime;
       border-radius: 50%;
     }
 
     #beam {
       position: absolute;
-      bottom: 0;
-      left: 50%;
-      width: 200px;
-      height: 10px;
-      background: #888;
-      transform: translateX(-50%) rotate(0deg);
-      transform-origin: center center;
-      transition: transform 0.1s linear;
+      width: 4px;
+      height: 200px;
+      background: red;
+      left: 198px;
+      top: 0;
+      transform-origin: bottom center;
     }
 
-    #score-display {
-      margin-top: 10px;
+    #score {
+      margin-bottom: 10px;
       font-size: 18px;
     }
   </style>
 </head>
 <body>
-  <h1>⚖️ Balance Bubbles</h1>
-  <div id="score-display">Score: 0</div>
+  <h1>🌪️ Escape the Beam</h1>
+  <div id="score">Time: 0</div>
   <div id="game-area">
     <div id="beam"></div>
+    <div id="player"></div>
   </div>
 
   <script>
-    const gameArea = document.getElementById("game-area");
-    const beam = document.getElementById("beam");
-    const scoreDisplay = document.getElementById("score-display");
-    let bubbles = [];
-    let balance = 0;
-    let score = 0;
+    const gameArea = document.getElementById('game-area');
+    const beam = document.getElementById('beam');
+    const player = document.getElementById('player');
+    const scoreDisplay = document.getElementById('score');
 
-    function spawnBubble() {
-      const bubble = document.createElement("div");
-      bubble.className = "bubble";
-      const side = Math.random() > 0.5 ? 'left' : 'right';
-      const x = side === 'left' ? 90 : 180;
-      const y = -30;
-      const weight = Math.floor(Math.random() * 3) + 1;
-      const size = 20 + weight * 5;
-      bubble.style.width = `${size}px`;
-      bubble.style.height = `${size}px`;
-      bubble.style.left = `${x}px`;
-      bubble.style.background = weight === 1 ? 'lightblue' : weight === 2 ? 'deepskyblue' : 'dodgerblue';
-      bubble.dataset.side = side;
-      bubble.dataset.weight = weight;
-      bubble.style.top = `${y}px`;
-      gameArea.appendChild(bubble);
-      bubbles.push({ el: bubble, x, y, weight, side });
+    let angle = 0;
+    let time = 0;
+    let speed = 0.5;
+    let radius = 180;
+    let playerX = 200, playerY = 200;
+
+    function rotateBeam() {
+      angle += speed;
+      beam.style.transform = `rotate(${angle}deg)`;
+      checkCollision();
     }
 
-    function updateBubbles() {
-      bubbles.forEach((b, i) => {
-        b.y += 2;
-        b.el.style.top = `${b.y}px`;
-
-        if (b.y > 460) {
-          balance += b.side === 'left' ? -b.weight : b.weight;
-          b.el.remove();
-          bubbles.splice(i, 1);
-          updateBeam();
-        }
-      });
+    function movePlayer(dx, dy) {
+      playerX = Math.max(10, Math.min(390, playerX + dx));
+      playerY = Math.max(10, Math.min(390, playerY + dy));
+      player.style.left = `${playerX - 10}px`;
+      player.style.top = `${playerY - 10}px`;
     }
 
-    function updateBeam() {
-      const tilt = Math.max(-20, Math.min(20, balance * 2));
-      beam.style.transform = `translateX(-50%) rotate(${tilt}deg)`;
-
-      if (Math.abs(balance) >= 10) {
-        alert("💥 You lost balance! Final Score: " + score);
+    function checkCollision() {
+      const bx = 200 + radius * Math.sin(angle * Math.PI / 180);
+      const by = 200 - radius * Math.cos(angle * Math.PI / 180);
+      const dx = bx - playerX;
+      const dy = by - playerY;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < 15) {
+        alert("💥 You got hit! Time survived: " + time + "s");
         location.reload();
       }
     }
 
-    function gameLoop() {
-      spawnBubble();
-      score++;
-      scoreDisplay.textContent = `Score: ${score}`;
-    }
-
-    setInterval(gameLoop, 1000);
-    setInterval(updateBubbles, 30);
-
-    document.addEventListener("keydown", (e) => {
-      if (e.key === "ArrowLeft") {
-        balance--;
-        updateBeam();
-      } else if (e.key === "ArrowRight") {
-        balance++;
-        updateBeam();
-      }
+    document.addEventListener('keydown', e => {
+      if (e.key === 'ArrowUp') movePlayer(0, -10);
+      if (e.key === 'ArrowDown') movePlayer(0, 10);
+      if (e.key === 'ArrowLeft') movePlayer(-10, 0);
+      if (e.key === 'ArrowRight') movePlayer(10, 0);
     });
+
+    setInterval(() => {
+      rotateBeam();
+    }, 20);
+
+    setInterval(() => {
+      time++;
+      scoreDisplay.textContent = `Time: ${time}`;
+      speed += 0.01;
+    }, 1000);
+
+    movePlayer(0, 0);
   </script>
 </body>
 </html>
