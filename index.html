@@ -5,65 +5,118 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Zen Garden</title>
   <style>
-    * {
+    html, body {
       margin: 0;
       padding: 0;
-      box-sizing: border-box;
-    }
-    html, body {
+      overflow: hidden;
       width: 100%;
       height: 100%;
-      overflow: hidden;
-      background: radial-gradient(circle, #e8e3d3 0%, #d3cbb4 100%);
+      background: radial-gradient(circle at center, #f5f2e8 0%, #e1dacd 100%);
+      font-family: 'Georgia', serif;
       cursor: crosshair;
     }
+
     canvas {
       display: block;
       width: 100vw;
       height: 100vh;
     }
+
+    .overlay {
+      position: absolute;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(255, 255, 255, 0.4);
+      padding: 10px 20px;
+      border-radius: 12px;
+      font-size: 1.2rem;
+      color: #4b4637;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      backdrop-filter: blur(6px);
+    }
+
+    #startButton {
+      position: absolute;
+      bottom: 40px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 12px 24px;
+      font-size: 1rem;
+      border: none;
+      border-radius: 25px;
+      background: #b7a78f;
+      color: white;
+      cursor: pointer;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+      transition: background 0.3s ease;
+    }
+
+    #startButton:hover {
+      background: #9d8f78;
+    }
   </style>
 </head>
 <body>
   <canvas id="sandCanvas"></canvas>
+  <div class="overlay">🧘 Welcome to Zen Garden – Drag to rake the sand</div>
+  <button id="startButton">Begin Relaxation</button>
 
-<audio autoplay loop>
-  <source src="/spring-sound.mp3" type="audio/mpeg">
-</audio>
-
+  <audio id="ambient" loop>
+    <source src="spring-sound.mp3" type="audio/mpeg">
+  </audio>
 
   <script>
     const canvas = document.getElementById('sandCanvas');
     const ctx = canvas.getContext('2d');
+    const audio = document.getElementById('ambient');
+    const startButton = document.getElementById('startButton');
 
     function resizeCanvas() {
-      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
-      ctx.fillStyle = '#e8e3d3';
+      drawBackground();
+    }
+
+    function drawBackground() {
+      // Soft gradient sand with waves
+      const grad = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+      grad.addColorStop(0, '#f3f0e2');
+      grad.addColorStop(1, '#e6ded0');
+      ctx.fillStyle = grad;
       ctx.fillRect(0, 0, canvas.width, canvas.height);
-      try { ctx.putImageData(imageData, 0, 0); } catch {}
     }
 
     window.addEventListener('resize', resizeCanvas);
     resizeCanvas();
 
     let isDrawing = false;
+    let lastX, lastY;
 
-    canvas.addEventListener('mousedown', () => isDrawing = true);
+    canvas.addEventListener('mousedown', (e) => {
+      isDrawing = true;
+      [lastX, lastY] = [e.offsetX, e.offsetY];
+    });
+
     canvas.addEventListener('mouseup', () => isDrawing = false);
-    canvas.addEventListener('mousemove', drawRake);
+    canvas.addEventListener('mouseout', () => isDrawing = false);
 
-    function drawRake(e) {
+    canvas.addEventListener('mousemove', (e) => {
       if (!isDrawing) return;
-      const x = e.clientX;
-      const y = e.clientY;
       ctx.beginPath();
-      ctx.arc(x, y, 10, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(120, 110, 90, 0.2)';
-      ctx.fill();
-      ctx.closePath();
-    }
+      ctx.moveTo(lastX, lastY);
+      ctx.lineTo(e.offsetX, e.offsetY);
+      ctx.strokeStyle = 'rgba(100, 90, 70, 0.15)';
+      ctx.lineWidth = 6;
+      ctx.lineCap = 'round';
+      ctx.stroke();
+      [lastX, lastY] = [e.offsetX, e.offsetY];
+    });
+
+    startButton.addEventListener('click', () => {
+      audio.play().catch(() => {});
+      startButton.style.display = 'none';
+    });
   </script>
 </body>
 </html>
