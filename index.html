@@ -3,172 +3,151 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>FSM Puzzle</title>
+  <title>DFA Builder</title>
   <style>
     body {
       margin: 0;
       font-family: sans-serif;
       background: #1a1a1a;
-      color: #fff;
+      color: white;
       display: flex;
       flex-direction: column;
       align-items: center;
       padding: 20px;
     }
-    #grid {
-      display: grid;
-      grid-template-columns: repeat(5, 50px);
-      grid-template-rows: repeat(5, 50px);
-      gap: 2px;
-      margin: 20px;
+    h1 {
+      margin-bottom: 10px;
     }
-    .cell {
-      width: 50px;
-      height: 50px;
-      background: #333;
+    #dfa-ui {
       display: flex;
-      align-items: center;
+      gap: 20px;
+      flex-wrap: wrap;
       justify-content: center;
     }
-    .agent {
-      background: lime;
+    .section {
+      border: 1px solid #444;
+      padding: 10px;
+      background: #2a2a2a;
+      border-radius: 5px;
+      min-width: 200px;
     }
-    .goal {
-      background: gold;
+    .section h2 {
+      font-size: 16px;
+      margin: 0 0 10px;
     }
-    #fsm-controls {
-      display: flex;
-      flex-direction: column;
-      gap: 5px;
-      max-width: 400px;
-    }
-    #fsm-controls textarea {
-      width: 100%;
-      height: 100px;
+    label, input, select {
+      display: block;
+      margin: 5px 0;
     }
     button {
-      padding: 10px;
+      margin-top: 10px;
+      padding: 5px 10px;
       background: #444;
-      color: white;
       border: none;
+      color: white;
       cursor: pointer;
     }
     button:hover {
       background: #666;
     }
+    #result {
+      margin-top: 20px;
+      font-size: 18px;
+    }
   </style>
 </head>
 <body>
-  <h1>🤖 FSM Puzzle</h1>
-  <div id="grid"></div>
-  <div id="fsm-controls">
-    <label for="instructions">Define your FSM (e.g. "A:empty→right:B")</label>
-    <textarea id="instructions"></textarea>
-    <button id="run">Run FSM</button>
+  <h1>🧠 DFA Challenge</h1>
+  <p>Create a DFA that accepts all strings starting with <strong>"a"</strong> and ending with <strong>"c"</strong></p>
+
+  <div id="dfa-ui">
+    <div class="section">
+      <h2>States</h2>
+      <input id="state-name" placeholder="State name (e.g. q0)" />
+      <button onclick="addState()">Add State</button>
+      <div id="states-list"></div>
+    </div>
+
+    <div class="section">
+      <h2>Transitions</h2>
+      <select id="from-state"></select>
+      <input id="input-symbol" placeholder="Input (e.g. a)" maxlength="1" />
+      <select id="to-state"></select>
+      <button onclick="addTransition()">Add Transition</button>
+      <div id="transitions-list"></div>
+    </div>
+
+    <div class="section">
+      <h2>Settings</h2>
+      <label>Start State:<select id="start-state"></select></label>
+      <label>Accept States:<input id="accept-states" placeholder="e.g. q1,q2" /></label>
+      <label>Test Input:<input id="test-string" /></label>
+      <button onclick="testDFA()">Test DFA</button>
+      <div id="result"></div>
+    </div>
   </div>
 
   <script>
-    const gridEl = document.getElementById('grid');
-    const instructionsEl = document.getElementById('instructions');
-    const runBtn = document.getElementById('run');
+    const states = new Set();
+    const transitions = {}; // key: from,input => value: to
 
-    const gridSize = 5;
-    const grid = [];
-    let agent = { x: 0, y: 0, state: 'A' };
-    const goal = { x: 4, y: 4 };
+    function updateDropdowns() {
+      const dropdowns = ["from-state", "to-state", "start-state"];
+      dropdowns.forEach(id => {
+        const sel = document.getElementById(id);
+        sel.innerHTML = '';
+        states.forEach(state => {
+          const opt = document.createElement('option');
+          opt.value = state;
+          opt.textContent = state;
+          sel.appendChild(opt);
+        });
+      });
+    }
 
-    function createGrid() {
-      gridEl.innerHTML = '';
-      for (let y = 0; y < gridSize; y++) {
-        for (let x = 0; x < gridSize; x++) {
-          const div = document.createElement('div');
-          div.classList.add('cell');
-          if (x === agent.x && y === agent.y) div.classList.add('agent');
-          if (x === goal.x && y === goal.y) div.classList.add('goal');
-          gridEl.appendChild(div);
-          grid.push({ x, y, el: div });
+    function addState() {
+      const input = document.getElementById('state-name');
+      const name = input.value.trim();
+      if (name && !states.has(name)) {
+        states.add(name);
+        document.getElementById('states-list').innerHTML += `<div>${name}</div>`;
+        updateDropdowns();
+      }
+      input.value = '';
+    }
+
+    function addTransition() {
+      const from = document.getElementById('from-state').value;
+      const symbol = document.getElementById('input-symbol').value.trim();
+      const to = document.getElementById('to-state').value;
+      if (from && symbol && to) {
+        transitions[`${from},${symbol}`] = to;
+        const entry = document.createElement('div');
+        entry.textContent = `${from} --${symbol}--> ${to}`;
+        document.getElementById('transitions-list').appendChild(entry);
+      }
+      document.getElementById('input-symbol').value = '';
+    }
+
+    function testDFA() {
+      const start = document.getElementById('start-state').value;
+      const accept = new Set(document.getElementById('accept-states').value.split(',').map(s => s.trim()));
+      const input = document.getElementById('test-string').value.trim();
+      let current = start;
+      for (const ch of input) {
+        const key = `${current},${ch}`;
+        if (!(key in transitions)) {
+          document.getElementById('result').textContent = `❌ Rejected at '${ch}' from ${current}`;
+          return;
         }
+        current = transitions[key];
+      }
+      if (accept.has(current)) {
+        document.getElementById('result').textContent = `✅ Accepted in state ${current}`;
+      } else {
+        document.getElementById('result').textContent = `❌ Rejected. Ended in state ${current}`;
       }
     }
-
-    function getCell(x, y) {
-      return grid.find(c => c.x === x && c.y === y);
-    }
-
-    function parseInstructions() {
-      const lines = instructionsEl.value.split('\n');
-      const fsm = {};
-      for (const line of lines) {
-        const match = line.match(/(\w+):(\w+)[→->](\w+):(\w+)/);
-        if (match) {
-          const [_, state, condition, direction, next] = match;
-          fsm[state] = fsm[state] || [];
-          fsm[state].push({ condition, direction, next });
-        }
-      }
-      return fsm;
-    }
-
-    function getCondition(x, y) {
-      if (x < 0 || y < 0 || x >= gridSize || y >= gridSize) return 'wall';
-      if (x === goal.x && y === goal.y) return 'goal';
-      return 'empty';
-    }
-
-    function move(dir) {
-      const dx = dir === 'left' ? -1 : dir === 'right' ? 1 : 0;
-      const dy = dir === 'up' ? -1 : dir === 'down' ? 1 : 0;
-      const newX = agent.x + dx;
-      const newY = agent.y + dy;
-      if (getCondition(newX, newY) !== 'wall') {
-        agent.x = newX;
-        agent.y = newY;
-      }
-    }
-
-    function step(fsm) {
-      const rules = fsm[agent.state];
-      if (!rules) return false;
-      const condition = getCondition(agent.x, agent.y);
-      for (const rule of rules) {
-        if (rule.condition === condition || rule.condition === 'any') {
-          move(rule.direction);
-          agent.state = rule.next;
-          return true;
-        }
-      }
-      return false;
-    }
-
-    function runFSM() {
-      const fsm = parseInstructions();
-      let steps = 0;
-      const interval = setInterval(() => {
-        if (!step(fsm) || (agent.x === goal.x && agent.y === goal.y)) {
-          clearInterval(interval);
-          createGrid();
-          if (agent.x === goal.x && agent.y === goal.y) {
-            alert("🎉 Goal reached in state " + agent.state);
-          } else {
-            alert("🛑 FSM halted.");
-          }
-        } else {
-          createGrid();
-        }
-        if (++steps > 100) {
-          clearInterval(interval);
-          alert("❌ FSM ran too long.");
-        }
-      }, 400);
-    }
-
-    runBtn.addEventListener('click', () => {
-      agent = { x: 0, y: 0, state: 'A' };
-      createGrid();
-      runFSM();
-    });
-
-    createGrid();
   </script>
 </body>
 </html>
