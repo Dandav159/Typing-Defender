@@ -59,6 +59,15 @@
       font-size: 16px;
       color: #ccc;
     }
+    .removable {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .removable button {
+      margin-left: 10px;
+      background: crimson;
+    }
   </style>
 </head>
 <body>
@@ -116,10 +125,25 @@
       const name = input.value.trim();
       if (name && !states.has(name)) {
         states.add(name);
-        document.getElementById('states-list').innerHTML += `<div>${name}</div>`;
+        const container = document.createElement('div');
+        container.className = 'removable';
+        container.innerHTML = `${name} <button onclick="removeState('${name}')">✕</button>`;
+        document.getElementById('states-list').appendChild(container);
         updateDropdowns();
       }
       input.value = '';
+    }
+
+    function removeState(name) {
+      states.delete(name);
+      for (const key in transitions) {
+        if (key.startsWith(name + ',') || transitions[key] === name) {
+          delete transitions[key];
+        }
+      }
+      renderStates();
+      renderTransitions();
+      updateDropdowns();
     }
 
     function addTransition() {
@@ -128,11 +152,36 @@
       const to = document.getElementById('to-state').value;
       if (from && symbol && to) {
         transitions[`${from},${symbol}`] = to;
-        const entry = document.createElement('div');
-        entry.textContent = `${from} --${symbol}--> ${to}`;
-        document.getElementById('transitions-list').appendChild(entry);
+        renderTransitions();
       }
       document.getElementById('input-symbol').value = '';
+    }
+
+    function removeTransition(key) {
+      delete transitions[key];
+      renderTransitions();
+    }
+
+    function renderStates() {
+      const list = document.getElementById('states-list');
+      list.innerHTML = '';
+      states.forEach(name => {
+        const container = document.createElement('div');
+        container.className = 'removable';
+        container.innerHTML = `${name} <button onclick="removeState('${name}')">✕</button>`;
+        list.appendChild(container);
+      });
+    }
+
+    function renderTransitions() {
+      const list = document.getElementById('transitions-list');
+      list.innerHTML = '';
+      for (const key in transitions) {
+        const entry = document.createElement('div');
+        entry.className = 'removable';
+        entry.innerHTML = `${key.replace(',', ' --')}--> ${transitions[key]} <button onclick="removeTransition('${key}')">✕</button>`;
+        list.appendChild(entry);
+      }
     }
 
     function testDFA() {
