@@ -42,6 +42,10 @@
       background-color: gold;
     }
 
+    .wall {
+      background-color: #555;
+    }
+
     h1 {
       margin-bottom: 20px;
     }
@@ -57,6 +61,11 @@
     const cells = [];
     const player = { x: 0, y: 0 };
     const goal = { x: 9, y: 9 };
+    const walls = new Set();
+
+    function posKey(x, y) {
+      return `${x},${y}`;
+    }
 
     function createGrid() {
       for (let y = 0; y < gridSize; y++) {
@@ -65,18 +74,28 @@
           cell.classList.add("cell");
           game.appendChild(cell);
           cells.push({ x, y, element: cell });
+
+          if (Math.random() < 0.2 && !(x === 0 && y === 0) && !(x === goal.x && y === goal.y)) {
+            walls.add(posKey(x, y));
+          }
         }
       }
     }
 
     function render() {
       cells.forEach(cell => {
+        const key = posKey(cell.x, cell.y);
         cell.element.className = "cell";
-        if (cell.x === player.x && cell.y === player.y) {
-          cell.element.classList.add("player");
-        }
-        if (cell.x === goal.x && cell.y === goal.y) {
-          cell.element.classList.add("goal");
+
+        if (walls.has(key)) {
+          cell.element.classList.add("wall");
+        } else {
+          if (cell.x === player.x && cell.y === player.y) {
+            cell.element.classList.add("player");
+          }
+          if (cell.x === goal.x && cell.y === goal.y) {
+            cell.element.classList.add("goal");
+          }
         }
       });
     }
@@ -85,11 +104,13 @@
       const newX = player.x + dx;
       const newY = player.y + dy;
       if (newX >= 0 && newX < gridSize && newY >= 0 && newY < gridSize) {
-        player.x = newX;
-        player.y = newY;
-        render();
-        if (player.x === goal.x && player.y === goal.y) {
-          setTimeout(() => alert("🎉 You reached the goal!"), 10);
+        if (!walls.has(posKey(newX, newY))) {
+          player.x = newX;
+          player.y = newY;
+          render();
+          if (player.x === goal.x && player.y === goal.y) {
+            setTimeout(() => alert("🎉 You reached the goal!"), 10);
+          }
         }
       }
     }
