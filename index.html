@@ -3,162 +3,108 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Typing Defender</title>
+  <title>KeyQuest: Visual Labyrinth</title>
   <style>
     body {
       margin: 0;
-      background-color: #111;
-      color: #0f0;
+      background-color: #1a1a1a;
+      color: #eee;
       font-family: monospace;
-      overflow: hidden;
-    }
-
-    #game-area {
-      position: relative;
-      width: 100vw;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
       height: 100vh;
     }
 
-    .virus {
-      position: absolute;
-      color: red;
-      font-size: 20px;
-      font-weight: bold;
+    #game {
+      display: grid;
+      grid-template-columns: repeat(10, 40px);
+      grid-template-rows: repeat(10, 40px);
+      gap: 2px;
     }
 
-    #hud {
-      position: absolute;
-      top: 10px;
-      left: 50%;
-      transform: translateX(-50%);
-      text-align: center;
-      font-size: 18px;
+    .cell {
+      width: 40px;
+      height: 40px;
+      background-color: #333;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 4px;
     }
 
-    #input {
-      position: absolute;
-      bottom: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-      font-size: 20px;
-      color: white;
+    .player {
+      background-color: #4caf50;
     }
 
-    #start-screen {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      text-align: center;
+    .goal {
+      background-color: gold;
     }
 
-    #start-btn {
-      margin-top: 20px;
-      padding: 10px 20px;
-      font-size: 16px;
-      cursor: pointer;
+    h1 {
+      margin-bottom: 20px;
     }
   </style>
 </head>
 <body>
-  <div id="game-area">
-    <div id="hud">
-      Score: <span id="score">0</span> | Lives: <span id="lives">3</span>
-    </div>
-    <div id="input"></div>
-    <div id="start-screen">
-      <h1>Typing Defender</h1>
-      <p>Type the falling words before they reach the bottom!</p>
-      <button id="start-btn">Start Game</button>
-    </div>
-  </div>
+  <h1>🧭 KeyQuest: Visual Labyrinth</h1>
+  <div id="game"></div>
 
   <script>
-    const words = ["code", "virus", "html", "style", "script", "defend", "hack", "data", "core", "crash"];
-    const gameArea = document.getElementById("game-area");
-    const scoreEl = document.getElementById("score");
-    const livesEl = document.getElementById("lives");
-    const inputEl = document.getElementById("input");
-    const startScreen = document.getElementById("start-screen");
-    const startBtn = document.getElementById("start-btn");
+    const gridSize = 10;
+    const game = document.getElementById("game");
+    const cells = [];
+    const player = { x: 0, y: 0 };
+    const goal = { x: 9, y: 9 };
 
-    let activeWords = [];
-    let typed = "";
-    let score = 0;
-    let lives = 3;
-    let gameInterval;
-    let wordInterval;
-
-    function createWord() {
-      const word = words[Math.floor(Math.random() * words.length)];
-      const span = document.createElement("span");
-      span.className = "virus";
-      span.textContent = word;
-      span.style.left = Math.random() * (window.innerWidth - 100) + "px";
-      span.dataset.word = word;
-      span.style.top = "0px";
-      gameArea.appendChild(span);
-      activeWords.push(span);
+    function createGrid() {
+      for (let y = 0; y < gridSize; y++) {
+        for (let x = 0; x < gridSize; x++) {
+          const cell = document.createElement("div");
+          cell.classList.add("cell");
+          game.appendChild(cell);
+          cells.push({ x, y, element: cell });
+        }
+      }
     }
 
-    function updateWords() {
-      activeWords.forEach((word, index) => {
-        let top = parseFloat(word.style.top);
-        word.style.top = (top + 2) + "px";
-        if (top + 20 >= window.innerHeight) {
-          gameArea.removeChild(word);
-          activeWords.splice(index, 1);
-          lives--;
-          livesEl.textContent = lives;
-          if (lives <= 0) endGame();
+    function render() {
+      cells.forEach(cell => {
+        cell.element.className = "cell";
+        if (cell.x === player.x && cell.y === player.y) {
+          cell.element.classList.add("player");
+        }
+        if (cell.x === goal.x && cell.y === goal.y) {
+          cell.element.classList.add("goal");
         }
       });
     }
 
-    function startGame() {
-      score = 0;
-      lives = 3;
-      typed = "";
-      scoreEl.textContent = score;
-      livesEl.textContent = lives;
-      inputEl.textContent = "";
-      activeWords.forEach(w => w.remove());
-      activeWords = [];
-      startScreen.style.display = "none";
-
-      gameInterval = setInterval(updateWords, 50);
-      wordInterval = setInterval(createWord, 1500);
-    }
-
-    function endGame() {
-      clearInterval(gameInterval);
-      clearInterval(wordInterval);
-      alert("Game Over! Your score: " + score);
-      startScreen.style.display = "block";
+    function movePlayer(dx, dy) {
+      const newX = player.x + dx;
+      const newY = player.y + dy;
+      if (newX >= 0 && newX < gridSize && newY >= 0 && newY < gridSize) {
+        player.x = newX;
+        player.y = newY;
+        render();
+        if (player.x === goal.x && player.y === goal.y) {
+          setTimeout(() => alert("🎉 You reached the goal!"), 10);
+        }
+      }
     }
 
     document.addEventListener("keydown", (e) => {
-      if (e.key.length === 1 && /[a-zA-Z]/.test(e.key)) {
-        typed += e.key.toLowerCase();
-        inputEl.textContent = typed;
-
-        activeWords.forEach((word, index) => {
-          if (word.dataset.word === typed) {
-            gameArea.removeChild(word);
-            activeWords.splice(index, 1);
-            score += 10;
-            scoreEl.textContent = score;
-            typed = "";
-            inputEl.textContent = "";
-          }
-        });
-      } else if (e.key === "Backspace") {
-        typed = typed.slice(0, -1);
-        inputEl.textContent = typed;
+      switch (e.key.toLowerCase()) {
+        case "w": movePlayer(0, -1); break;
+        case "s": movePlayer(0, 1); break;
+        case "a": movePlayer(-1, 0); break;
+        case "d": movePlayer(1, 0); break;
       }
     });
 
-    startBtn.addEventListener("click", startGame);
+    createGrid();
+    render();
   </script>
 </body>
 </html>
