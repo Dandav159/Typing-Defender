@@ -2,36 +2,79 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Zen Garden</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
     html, body {
       margin: 0;
       padding: 0;
       overflow: hidden;
       height: 100%;
-      background: #f5f2e8;
+      background: #dcd3c2;
       font-family: 'Georgia', serif;
-      cursor: crosshair;
+      user-select: none;
     }
 
     canvas {
-      display: block;
+      position: absolute;
+      top: 0;
+      left: 0;
+      z-index: 1;
+    }
+
+    .ui {
+      position: absolute;
+      z-index: 3;
+      pointer-events: none;
+    }
+
+    .item {
+      position: absolute;
+      width: 48px;
+      height: 48px;
+      pointer-events: auto;
+      cursor: grab;
+      user-drag: none;
+    }
+
+    .item:active {
+      cursor: grabbing;
+    }
+
+    #resetButton {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 12px 24px;
+      background: #a4967e;
+      color: white;
+      border: none;
+      border-radius: 30px;
+      font-size: 16px;
+      cursor: pointer;
+      z-index: 5;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    }
+
+    #resetButton:hover {
+      background: #8b7b66;
     }
 
     #startButton {
       position: absolute;
-      bottom: 30px;
+      bottom: 70px;
       left: 50%;
       transform: translateX(-50%);
-      padding: 12px 28px;
+      padding: 12px 24px;
       background: #b7a78f;
       color: white;
-      font-size: 16px;
       border: none;
       border-radius: 30px;
+      font-size: 16px;
       cursor: pointer;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+      z-index: 5;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
     }
 
     #startButton:hover {
@@ -40,77 +83,137 @@
   </style>
 </head>
 <body>
-  <canvas id="canvas"></canvas>
+  <!-- Canvases -->
+  <canvas id="bg"></canvas>
+  <canvas id="rake"></canvas>
+
+  <!-- UI for items -->
+  <div class="ui" id="itemLayer">
+    <img src="https://i.imgur.com/0T9pYY3.png" class="item" style="top:20px;left:20px;" />
+    <img src="https://i.imgur.com/y0A2hPG.png" class="item" style="top:100px;left:60px;" />
+    <img src="https://i.imgur.com/evOyTfl.png" class="item" style="top:60px;left:200px;" />
+  </div>
+
+  <!-- Buttons -->
   <button id="startButton">Begin Relaxation</button>
+  <button id="resetButton">Reset Sand</button>
+
+  <!-- Audio -->
   <audio id="ambient" loop>
-    <source src="spring-sound.mp3" type="audio/mpeg">
+    <source src="ambient.mp3" type="audio/mpeg">
   </audio>
 
   <script>
-    const canvas = document.getElementById('canvas');
-    const ctx = canvas.getContext('2d');
-    let width, height;
+    const bgCanvas = document.getElementById('bg');
+    const rakeCanvas = document.getElementById('rake');
+    const bgCtx = bgCanvas.getContext('2d');
+    const rakeCtx = rakeCanvas.getContext('2d');
+    const startBtn = document.getElementById('startButton');
+    const resetBtn = document.getElementById('resetButton');
+    const audio = document.getElementById('ambient');
 
-    function resizeCanvas() {
-      width = canvas.width = window.innerWidth;
-      height = canvas.height = window.innerHeight;
-      drawSand();
+    // Set canvas sizes
+    function resize() {
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      [bgCanvas, rakeCanvas].forEach(c => {
+        c.width = w;
+        c.height = h;
+      });
     }
 
-    function drawSand() {
-      // subtle noise texture
-      ctx.fillStyle = '#f3f0e2';
-      ctx.fillRect(0, 0, width, height);
+    resize();
+    window.addEventListener('resize', resize);
 
-      for (let i = 0; i < 10000; i++) {
-        const x = Math.random() * width;
-        const y = Math.random() * height;
-        const alpha = Math.random() * 0.05;
-        ctx.fillStyle = `rgba(150, 140, 120, ${alpha})`;
-        ctx.fillRect(x, y, 1, 1);
+    // Shader sand animation (animated Perlin-like noise)
+    let t = 0;
+    function drawShaderSand() {
+      const imageData = bgCtx.createImageData(bgCanvas.width, bgCanvas.height);
+      const data = imageData.data;
+      for (let y = 0; y < bgCanvas.height; y++) {
+        for (let x = 0; x < bgCanvas.width; x++) {
+          const idx = (y * bgCanvas.width + x) * 4;
+          const n = Math.sin((x + t) * 0.01) + Math.cos((y + t) * 0.01);
+          const shade = 220 + Math.floor(n * 4);
+          data[idx] = data[idx + 1] = data[idx + 2] = shade;
+          data[idx + 3] = 255;
+        }
       }
+      bgCtx.putImageData(imageData, 0, 0);
+      t += 0.5;
+      requestAnimationFrame(drawShaderSand);
     }
+    drawShaderSand();
 
-    resizeCanvas();
-    window.addEventListener('resize', resizeCanvas);
-
+    // Raking
     let isDrawing = false;
     let lastX, lastY;
-
-    canvas.addEventListener('mousedown', (e) => {
+    rakeCanvas.addEventListener('mousedown', (e) => {
       isDrawing = true;
       [lastX, lastY] = [e.offsetX, e.offsetY];
     });
-
-    canvas.addEventListener('mouseup', () => isDrawing = false);
-    canvas.addEventListener('mouseout', () => isDrawing = false);
-
-    canvas.addEventListener('mousemove', (e) => {
+    rakeCanvas.addEventListener('mouseup', () => isDrawing = false);
+    rakeCanvas.addEventListener('mouseout', () => isDrawing = false);
+    rakeCanvas.addEventListener('mousemove', e => {
       if (!isDrawing) return;
+      const [x, y] = [e.offsetX, e.offsetY];
+      rakeCtx.beginPath();
+      rakeCtx.moveTo(lastX, lastY);
+      rakeCtx.lineTo(x, y);
+      rakeCtx.strokeStyle = 'rgba(80, 70, 60, 0.15)';
+      rakeCtx.lineWidth = 6;
+      rakeCtx.lineCap = 'round';
+      rakeCtx.stroke();
 
-      const x = e.offsetX;
-      const y = e.offsetY;
+      rakeCtx.beginPath();
+      rakeCtx.moveTo(lastX + 2, lastY + 2);
+      rakeCtx.lineTo(x + 2, y + 2);
+      rakeCtx.strokeStyle = 'rgba(255,255,255,0.1)';
+      rakeCtx.stroke();
 
-      // simulate groove by erasing a faint line
-      ctx.globalCompositeOperation = 'destination-out';
-      ctx.beginPath();
-      ctx.moveTo(lastX, lastY);
-      ctx.lineTo(x, y);
-      ctx.lineWidth = 8;
-      ctx.lineCap = 'round';
-      ctx.stroke();
-      ctx.globalCompositeOperation = 'source-over';
-
-      lastX = x;
-      lastY = y;
+      [lastX, lastY] = [x, y];
     });
 
-    const audio = document.getElementById('ambient');
-    const startButton = document.getElementById('startButton');
+    // Reset animation (wave fade out)
+    function resetSand() {
+      let alpha = 1.0;
+      const fade = () => {
+        rakeCtx.fillStyle = `rgba(255,255,255,${0.05})`;
+        rakeCtx.fillRect(0, 0, rakeCanvas.width, rakeCanvas.height);
+        alpha -= 0.05;
+        if (alpha > 0) requestAnimationFrame(fade);
+        else rakeCtx.clearRect(0, 0, rakeCanvas.width, rakeCanvas.height);
+      };
+      fade();
+    }
+    resetBtn.addEventListener('click', resetSand);
 
-    startButton.addEventListener('click', () => {
+    // Ambient audio start
+    startBtn.addEventListener('click', () => {
       audio.play().catch(() => {});
-      startButton.style.display = 'none';
+      startBtn.style.display = 'none';
+    });
+
+    // Drag and drop items
+    const items = document.querySelectorAll('.item');
+    items.forEach(item => {
+      let offsetX, offsetY;
+      item.addEventListener('mousedown', e => {
+        item.style.zIndex = 1000;
+        offsetX = e.offsetX;
+        offsetY = e.offsetY;
+        function move(e) {
+          item.style.left = `${e.pageX - offsetX}px`;
+          item.style.top = `${e.pageY - offsetY}px`;
+        }
+        function stop() {
+          document.removeEventListener('mousemove', move);
+          document.removeEventListener('mouseup', stop);
+          item.style.zIndex = 10;
+        }
+        document.addEventListener('mousemove', move);
+        document.addEventListener('mouseup', stop);
+      });
     });
   </script>
 </body>
