@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>DFA Builder</title>
+  <title>DFA Challenge</title>
   <style>
     body {
       margin: 0;
@@ -55,7 +55,7 @@
       font-size: 18px;
     }
     #alphabet {
-      margin-bottom: 10px;
+      margin: 10px 0;
       font-size: 16px;
       color: #ccc;
     }
@@ -72,8 +72,9 @@
 </head>
 <body>
   <h1>🧠 DFA Challenge</h1>
-  <p>Create a DFA that accepts all strings starting with <strong>"a"</strong> and ending with <strong>"c"</strong></p>
-  <div id="alphabet">Alphabet: { a, b, c }</div>
+  <div id="mission"></div>
+  <div id="alphabet"></div>
+  <button onclick="resetChallenge()">🔁 New Mission</button>
 
   <div id="dfa-ui">
     <div class="section">
@@ -103,8 +104,62 @@
   </div>
 
   <script>
-    const states = new Set();
-    const transitions = {}; // key: from,input => value: to
+    const alphabets = [
+      ['a', 'b'],
+      ['a', 'b', 'c'],
+      ['x', 'y'],
+      ['0', '1']
+    ];
+
+    const templates = [
+      (a) => { const x = r(a), y = r(a); return { rule: `start with "${x}" and end with "${y}"`, test: s => s.startsWith(x) && s.endsWith(y) }; },
+      (a) => { const sub = a.join('').slice(0, 2); return { rule: `contain "${sub}" as a substring`, test: s => s.includes(sub) }; },
+      (a) => { const x = r(a); return { rule: `have even number of "${x}"`, test: s => s.split('').filter(c => c === x).length % 2 === 0 }; },
+      (a) => { const x = r(a), n = 2 + Math.floor(Math.random()*3); return { rule: `not contain ${n} consecutive "${x}"`, test: s => !s.includes(x.repeat(n)) }; },
+      (a) => { const x = r(a); return { rule: `end with "${x}"`, test: s => s.endsWith(x) }; },
+      (a) => { const x = r(a); return { rule: `start with "${x}"`, test: s => s.startsWith(x) }; },
+      (a) => { const set = new Set(a); return { rule: `contain only characters from the alphabet`, test: s => [...s].every(c => set.has(c)) }; },
+      (_) => ({ rule: `be exactly 3 characters long`, test: s => s.length === 3 }),
+      (_) => ({ rule: `be an empty string`, test: s => s === '' }),
+      (_) => ({ rule: `not be empty`, test: s => s.length > 0 }),
+      (a) => { const x = r(a); return { rule: `not contain "${x}"`, test: s => !s.includes(x) }; },
+      (a) => { const x = r(a); return { rule: `contain "${x}" exactly once`, test: s => s.split('').filter(c => c === x).length === 1 }; },
+      (a) => { const [x, y] = a; return { rule: `alternate between "${x}" and "${y}"`, test: s => s === '' || [...s].every((c, i) => c === (i % 2 === 0 ? x : y)) }; },
+      (a) => { const x = r(a); return { rule: `have odd number of "${x}"`, test: s => s.split('').filter(c => c === x).length % 2 === 1 }; },
+      (_) => ({ rule: `be a palindrome`, test: s => s === s.split('').reverse().join('') }),
+      (a) => { const x = a[0]; return { rule: `contain "${x}" at least twice`, test: s => s.split('').filter(c => c === x).length >= 2 }; },
+      (_) => ({ rule: `have length divisible by 2`, test: s => s.length % 2 === 0 }),
+      (_) => ({ rule: `have length divisible by 3`, test: s => s.length % 3 === 0 }),
+      (a) => { const x = r(a); return { rule: `start and end with "${x}"`, test: s => s.startsWith(x) && s.endsWith(x) }; },
+      (_) => ({ rule: `contain no repeating characters`, test: s => new Set(s).size === s.length })
+    ];
+
+    const r = (a) => a[Math.floor(Math.random() * a.length)];
+
+    let currentMission;
+    let currentAlphabet;
+    let states = new Set();
+    let transitions = {};
+
+    function resetChallenge() {
+      states = new Set();
+      transitions = {};
+      document.getElementById('states-list').innerHTML = '';
+      document.getElementById('transitions-list').innerHTML = '';
+      document.getElementById('accept-states').value = '';
+      document.getElementById('test-string').value = '';
+      document.getElementById('result').textContent = '';
+      generateMission();
+      updateDropdowns();
+    }
+
+    function generateMission() {
+      currentAlphabet = alphabets[Math.floor(Math.random() * alphabets.length)];
+      const template = templates[Math.floor(Math.random() * templates.length)];
+      currentMission = template(currentAlphabet);
+      document.getElementById('mission').innerHTML = `<p>Create a DFA that accepts all strings that <strong>${currentMission.rule}</strong></p>`;
+      document.getElementById('alphabet').textContent = `Alphabet: { ${currentAlphabet.join(', ')} }`;
+    }
 
     function updateDropdowns() {
       const dropdowns = ["from-state", "to-state", "start-state"];
@@ -150,9 +205,11 @@
       const from = document.getElementById('from-state').value;
       const symbol = document.getElementById('input-symbol').value.trim();
       const to = document.getElementById('to-state').value;
-      if (from && symbol && to) {
+      if (from && symbol && to && currentAlphabet.includes(symbol)) {
         transitions[`${from},${symbol}`] = to;
         renderTransitions();
+      } else {
+        alert("Symbol must be in the defined alphabet.");
       }
       document.getElementById('input-symbol').value = '';
     }
@@ -190,19 +247,27 @@
       const input = document.getElementById('test-string').value.trim();
       let current = start;
       for (const ch of input) {
+        if (!currentAlphabet.includes(ch)) {
+          document.getElementById('result').textContent = `❌ Symbol '${ch}' not in alphabet.`;
+          return;
+        }
         const key = `${current},${ch}`;
         if (!(key in transitions)) {
-          document.getElementById('result').textContent = `❌ Rejected at '${ch}' from ${current}`;
+          document.getElementById('result').textContent = `✅ DFA rejected '${input}' as expected.`;
           return;
         }
         current = transitions[key];
       }
-      if (accept.has(current)) {
-        document.getElementById('result').textContent = `✅ Accepted in state ${current}`;
+      const accepted = accept.has(current);
+      const expected = currentMission.test(input);
+      if (accepted === expected) {
+        document.getElementById('result').textContent = `✅ DFA ${accepted ? 'accepted' : 'rejected'} '${input}' correctly.`;
       } else {
-        document.getElementById('result').textContent = `❌ Rejected. Ended in state ${current}`;
+        document.getElementById('result').textContent = `❌ DFA ${accepted ? 'incorrectly accepted' : 'incorrectly rejected'} '${input}'.`;
       }
     }
+
+    resetChallenge();
   </script>
 </body>
 </html>
