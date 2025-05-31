@@ -1,73 +1,17 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>DFA/PDA Challenge</title>
   <style>
-    body {
-      margin: 0;
-      font-family: sans-serif;
-      background: #1a1a1a;
-      color: white;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 20px;
-    }
-    h1 {
-      margin-bottom: 10px;
-    }
-    #dfa-ui {
-      display: flex;
-      gap: 20px;
-      flex-wrap: wrap;
-      justify-content: center;
-    }
-    .section {
-      border: 1px solid #444;
-      padding: 10px;
-      background: #2a2a2a;
-      border-radius: 5px;
-      min-width: 200px;
-    }
-    .section h2 {
-      font-size: 16px;
-      margin: 0 0 10px;
-    }
-    label, input, select {
-      display: block;
-      margin: 5px 0;
-    }
-    button {
-      margin-top: 10px;
-      padding: 5px 10px;
-      background: #444;
-      border: none;
-      color: white;
-      cursor: pointer;
-    }
-    button:hover {
-      background: #666;
-    }
-    #result {
-      margin-top: 20px;
-      font-size: 18px;
-    }
-    #alphabet {
-      margin: 10px 0;
-      font-size: 16px;
-      color: #ccc;
-    }
-    .removable {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    .removable button {
-      margin-left: 10px;
-      background: crimson;
-    }
+    body { background: #111; color: #eee; font-family: sans-serif; padding: 20px; }
+    h1 { font-size: 24px; }
+    .section { background: #1d1d1d; border: 1px solid #333; padding: 10px; margin: 10px 0; border-radius: 5px; }
+    .stack-view { background: #222; padding: 10px; font-family: monospace; margin-top: 10px; }
+    .input-box, select, button, textarea { margin-top: 5px; display: block; width: 100%; padding: 5px; background: #333; color: #eee; border: none; border-radius: 3px; }
+    button:hover { background: #555; cursor: pointer; }
+    .hidden { display: none; }
   </style>
 </head>
 <body>
@@ -75,169 +19,82 @@
   <label><input type="checkbox" id="enablePDA" onchange="resetChallenge()"> Enable PDA Challenges</label>
   <div id="mission"></div>
   <div id="alphabet"></div>
-  <button onclick="resetChallenge()">🔁 New Mission</button>
 
-  <div id="dfa-ui">
-    <div class="section">
-      <h2>States</h2>
-      <input id="state-name" placeholder="State name (e.g. q0)" />
-      <button onclick="addState()">Add State</button>
-      <div id="states-list"></div>
-    </div>
-
-    <div class="section">
-      <h2>Transitions</h2>
-      <select id="from-state"></select>
-      <input id="input-symbol" placeholder="Input (e.g. a)" maxlength="1" />
-      <select id="to-state"></select>
-      <button onclick="addTransition()">Add Transition</button>
-      <div id="transitions-list"></div>
-    </div>
-
-    <div class="section">
-      <h2>Settings</h2>
-      <label>Start State:<select id="start-state"></select></label>
-      <label>Accept States:<input id="accept-states" placeholder="e.g. q1,q2" /></label>
-      <label>Test Input:<input id="test-string" /></label>
-      <button onclick="testDFA()">Test DFA</button>
-      <div id="result"></div>
-    </div>
+  <div class="section">
+    <h3>Test Your Automaton</h3>
+    <input class="input-box" id="test-string" placeholder="Enter input string" />
+    <button onclick="runSimulation()">Test</button>
+    <div id="result"></div>
+    <div class="stack-view" id="stack-view"></div>
   </div>
 
   <script>
-    const alphabets = [ ['a', 'b'], ['a', 'b', 'c'], ['x', 'y'], ['0', '1'] ];
+    const alphabets = [['a', 'b'], ['a', 'b', 'c'], ['0', '1']];
     const templates = [
-      (a) => { const x = r(a), y = r(a); return { type: "DFA", rule: `start with "${x}" and end with "${y}"`, test: s => s.startsWith(x) && s.endsWith(y) }; },
-      (a) => { const sub = a.join('').slice(0, 2); return { type: "DFA", rule: `contain "${sub}" as a substring`, test: s => s.includes(sub) }; },
-      (a) => { const x = r(a); return { type: "DFA", rule: `have even number of "${x}"`, test: s => s.split('').filter(c => c === x).length % 2 === 0 }; },
-      (a) => { const x = r(a), n = 2 + Math.floor(Math.random()*3); return { type: "DFA", rule: `not contain ${n} consecutive "${x}"`, test: s => !s.includes(x.repeat(n)) }; },
-      (a) => { const x = r(a); return { type: "DFA", rule: `end with "${x}"`, test: s => s.endsWith(x) }; },
-      (a) => { const x = r(a); return { type: "DFA", rule: `start with "${x}"`, test: s => s.startsWith(x) }; },
-      (_) => ({ type: "DFA", rule: `be exactly 3 characters long`, test: s => s.length === 3 }),
-      (_) => ({ type: "DFA", rule: `be an empty string`, test: s => s === '' }),
-      (_) => ({ type: "DFA", rule: `not be empty`, test: s => s.length > 0 }),
-      (a) => { const x = r(a); return { type: "DFA", rule: `not contain "${x}"`, test: s => !s.includes(x) }; },
-      (a) => { const x = r(a); return { type: "DFA", rule: `contain "${x}" exactly once`, test: s => s.split('').filter(c => c === x).length === 1 }; },
-      (a) => { const [x, y] = a.length >= 2 ? a : [a[0], a[0]]; return { type: "DFA", rule: `alternate between "${x}" and "${y}"`, test: s => s === '' || [...s].every((c, i) => c === (i % 2 === 0 ? x : y)) }; },
-      (a) => { const x = r(a); return { type: "DFA", rule: `have odd number of "${x}"`, test: s => s.split('').filter(c => c === x).length % 2 === 1 }; },
-      (_) => ({ type: "PDA", rule: `be a palindrome`, test: s => s === s.split('').reverse().join('') }),
-      (a) => { const x = a[0]; return { type: "DFA", rule: `contain "${x}" at least twice`, test: s => s.split('').filter(c => c === x).length >= 2 }; },
-      (_) => ({ type: "DFA", rule: `have length divisible by 2`, test: s => s.length % 2 === 0 }),
-      (_) => ({ type: "DFA", rule: `have length divisible by 3`, test: s => s.length % 3 === 0 }),
-      (a) => { const x = r(a); return { type: "DFA", rule: `start and end with "${x}"`, test: s => s.startsWith(x) && s.endsWith(x) }; },
-      (_) => ({ type: "PDA", rule: `contain no repeating characters`, test: s => new Set(s).size === s.length })
+      (_) => ({ type: "PDA", rule: "be a palindrome", test: s => s === s.split('').reverse().join('') }),
+      (_) => ({ type: "PDA", rule: "contain no repeating characters", test: s => new Set(s).size === s.length }),
+      (a) => { const x = r(a); return { type: "DFA", rule: `start with '${x}'`, test: s => s.startsWith(x) }; },
+      (a) => { const x = r(a); return { type: "DFA", rule: `end with '${x}'`, test: s => s.endsWith(x) }; },
+      (a) => { const x = r(a); return { type: "DFA", rule: `have even number of '${x}'`, test: s => s.split('').filter(c => c === x).length % 2 === 0 }; },
+      (a) => { const x = r(a); return { type: "DFA", rule: `have odd number of '${x}'`, test: s => s.split('').filter(c => c === x).length % 2 === 1 }; },
+      (a) => { const x = r(a); return { type: "DFA", rule: `contain '${x}' exactly once`, test: s => s.split('').filter(c => c === x).length === 1 }; }
     ];
 
-    let currentMission, currentAlphabet, states = new Set(), transitions = {};
+    let currentMission, currentAlphabet;
 
-    const r = (a) => a[Math.floor(Math.random() * a.length)];
+    function r(a) { return a[Math.floor(Math.random() * a.length)]; }
 
     function resetChallenge() {
-      states = new Set(); transitions = {};
-      document.getElementById('states-list').innerHTML = '';
-      document.getElementById('transitions-list').innerHTML = '';
-      document.getElementById('accept-states').value = '';
-      document.getElementById('test-string').value = '';
-      document.getElementById('result').textContent = '';
       const enablePDA = document.getElementById('enablePDA').checked;
       currentAlphabet = r(alphabets);
-      const options = templates.filter(t => enablePDA || t(currentAlphabet).type === "DFA");
-      currentMission = r(options)(currentAlphabet);
+      const filtered = templates.filter(t => enablePDA || t(currentAlphabet).type === "DFA");
+      currentMission = r(filtered)(currentAlphabet);
       document.getElementById('mission').innerText = `Mission: Create a ${currentMission.type} that will ${currentMission.rule}`;
-      document.getElementById('alphabet').textContent = `Alphabet: { ${currentAlphabet.join(', ')} }`;
-      updateDropdowns();
+      document.getElementById('alphabet').innerText = `Alphabet: { ${currentAlphabet.join(', ')} }`;
+      document.getElementById('result').innerText = '';
+      document.getElementById('stack-view').innerText = '';
     }
 
-    function updateDropdowns() {
-      ["from-state", "to-state", "start-state"].forEach(id => {
-        const sel = document.getElementById(id);
-        sel.innerHTML = '';
-        states.forEach(state => {
-          const opt = document.createElement('option');
-          opt.value = state;
-          opt.textContent = state;
-          sel.appendChild(opt);
-        });
-      });
-    }
-
-    function addState() {
-      const name = document.getElementById('state-name').value.trim();
-      if (name && !states.has(name)) {
-        states.add(name);
-        const d = document.createElement('div');
-        d.className = 'removable';
-        d.innerHTML = `${name} <button onclick="removeState('${name}')">✕</button>`;
-        document.getElementById('states-list').appendChild(d);
-        updateDropdowns();
-      }
-      document.getElementById('state-name').value = '';
-    }
-
-    function removeState(name) {
-      states.delete(name);
-      for (const k in transitions) if (k.startsWith(name + ',') || transitions[k] === name) delete transitions[k];
-      renderStates(); renderTransitions(); updateDropdowns();
-    }
-
-    function addTransition() {
-      const from = document.getElementById('from-state').value;
-      const sym = document.getElementById('input-symbol').value.trim();
-      const to = document.getElementById('to-state').value;
-      if (from && sym && to && currentAlphabet.includes(sym)) {
-        transitions[`${from},${sym}`] = to;
-        renderTransitions();
-      } else alert("Symbol must be in the defined alphabet.");
-      document.getElementById('input-symbol').value = '';
-    }
-
-    function removeTransition(k) {
-      delete transitions[k];
-      renderTransitions();
-    }
-
-    function renderStates() {
-      const list = document.getElementById('states-list');
-      list.innerHTML = '';
-      states.forEach(name => {
-        const d = document.createElement('div');
-        d.className = 'removable';
-        d.innerHTML = `${name} <button onclick="removeState('${name}')">✕</button>`;
-        list.appendChild(d);
-      });
-    }
-
-    function renderTransitions() {
-      const list = document.getElementById('transitions-list');
-      list.innerHTML = '';
-      for (const k in transitions) {
-        const d = document.createElement('div');
-        d.className = 'removable';
-        d.innerHTML = `${k.replace(',', ' --')}--> ${transitions[k]} <button onclick="removeTransition('${k}')">✕</button>`;
-        list.appendChild(d);
-      }
-    }
-
-    function testDFA() {
-      const start = document.getElementById('start-state').value;
-      const accepts = new Set(document.getElementById('accept-states').value.split(',').map(s => s.trim()));
+    function runSimulation() {
       const input = document.getElementById('test-string').value.trim();
-      let curr = start;
-      for (const ch of input) {
-        if (!currentAlphabet.includes(ch)) {
-          document.getElementById('result').textContent = `❌ Symbol '${ch}' not in alphabet.`;
-          return;
+      const missionType = currentMission.type;
+      const rule = currentMission.rule;
+
+      let resultText = '';
+      let stack = [];
+
+      if (missionType === 'PDA' && rule.includes("palindrome")) {
+        const mid = Math.floor(input.length / 2);
+        for (let i = 0; i < mid; i++) stack.push(input[i]);
+        let j = input.length % 2 === 0 ? mid : mid + 1;
+        while (j < input.length) {
+          const top = stack.pop();
+          if (top !== input[j]) {
+            resultText = `❌ Rejected. Mismatch at index ${j}: expected '${top}', found '${input[j]}'`;
+            break;
+          }
+          j++;
         }
-        const key = `${curr},${ch}`;
-        if (!(key in transitions)) {
-          document.getElementById('result').textContent = `✅ DFA rejected '${input}' as expected.`;
-          return;
-        }
-        curr = transitions[key];
+        if (stack.length === 0 && !resultText) resultText = `✅ Accepted as a palindrome.`;
       }
-      const accepted = accepts.has(curr);
-      const expected = currentMission.test(input);
-      document.getElementById('result').textContent = accepted === expected ? `✅ DFA ${accepted ? 'accepted' : 'rejected'} '${input}' correctly.` : `❌ DFA ${accepted ? 'incorrectly accepted' : 'incorrectly rejected'} '${input}'.`;
+      else if (missionType === 'PDA' && rule.includes("no repeating characters")) {
+        const seen = new Set();
+        for (let i = 0; i < input.length; i++) {
+          if (seen.has(input[i])) {
+            resultText = `❌ Rejected. '${input[i]}' repeated at index ${i}`;
+            break;
+          }
+          seen.add(input[i]);
+        }
+        if (!resultText) resultText = `✅ Accepted. No repeating characters.`;
+      }
+      else if (missionType === 'DFA') {
+        const expected = currentMission.test(input);
+        resultText = expected ? `✅ Accepted.` : `❌ Rejected.`;
+      }
+
+      document.getElementById('result').innerText = resultText;
+      document.getElementById('stack-view').innerText = missionType === 'PDA' ? `Stack: [${stack.join(', ')}]` : '';
     }
 
     resetChallenge();
