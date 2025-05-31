@@ -9,86 +9,70 @@
       margin: 0;
       padding: 0;
       overflow: hidden;
-      width: 100%;
       height: 100%;
-      background: radial-gradient(circle at center, #f5f2e8 0%, #e1dacd 100%);
+      background: #f5f2e8;
       font-family: 'Georgia', serif;
       cursor: crosshair;
     }
 
     canvas {
       display: block;
-      width: 100vw;
-      height: 100vh;
-    }
-
-    .overlay {
-      position: absolute;
-      top: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: rgba(255, 255, 255, 0.4);
-      padding: 10px 20px;
-      border-radius: 12px;
-      font-size: 1.2rem;
-      color: #4b4637;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-      backdrop-filter: blur(6px);
     }
 
     #startButton {
       position: absolute;
-      bottom: 40px;
+      bottom: 30px;
       left: 50%;
       transform: translateX(-50%);
-      padding: 12px 24px;
-      font-size: 1rem;
-      border: none;
-      border-radius: 25px;
+      padding: 12px 28px;
       background: #b7a78f;
       color: white;
+      font-size: 16px;
+      border: none;
+      border-radius: 30px;
       cursor: pointer;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-      transition: background 0.3s ease;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.15);
     }
 
     #startButton:hover {
-      background: #9d8f78;
+      background: #9e8e76;
     }
   </style>
 </head>
 <body>
-  <canvas id="sandCanvas"></canvas>
-  <div class="overlay">🧘 Welcome to Zen Garden – Drag to rake the sand</div>
+  <canvas id="canvas"></canvas>
   <button id="startButton">Begin Relaxation</button>
-
   <audio id="ambient" loop>
     <source src="spring-sound.mp3" type="audio/mpeg">
   </audio>
 
   <script>
-    const canvas = document.getElementById('sandCanvas');
+    const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
-    const audio = document.getElementById('ambient');
-    const startButton = document.getElementById('startButton');
+    let width, height;
 
     function resizeCanvas() {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
-      drawBackground();
+      width = canvas.width = window.innerWidth;
+      height = canvas.height = window.innerHeight;
+      drawSand();
     }
 
-    function drawBackground() {
-      // Soft gradient sand with waves
-      const grad = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
-      grad.addColorStop(0, '#f3f0e2');
-      grad.addColorStop(1, '#e6ded0');
-      ctx.fillStyle = grad;
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    function drawSand() {
+      // subtle noise texture
+      ctx.fillStyle = '#f3f0e2';
+      ctx.fillRect(0, 0, width, height);
+
+      for (let i = 0; i < 10000; i++) {
+        const x = Math.random() * width;
+        const y = Math.random() * height;
+        const alpha = Math.random() * 0.05;
+        ctx.fillStyle = `rgba(150, 140, 120, ${alpha})`;
+        ctx.fillRect(x, y, 1, 1);
+      }
     }
 
-    window.addEventListener('resize', resizeCanvas);
     resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
 
     let isDrawing = false;
     let lastX, lastY;
@@ -103,15 +87,26 @@
 
     canvas.addEventListener('mousemove', (e) => {
       if (!isDrawing) return;
+
+      const x = e.offsetX;
+      const y = e.offsetY;
+
+      // simulate groove by erasing a faint line
+      ctx.globalCompositeOperation = 'destination-out';
       ctx.beginPath();
       ctx.moveTo(lastX, lastY);
-      ctx.lineTo(e.offsetX, e.offsetY);
-      ctx.strokeStyle = 'rgba(100, 90, 70, 0.15)';
-      ctx.lineWidth = 6;
+      ctx.lineTo(x, y);
+      ctx.lineWidth = 8;
       ctx.lineCap = 'round';
       ctx.stroke();
-      [lastX, lastY] = [e.offsetX, e.offsetY];
+      ctx.globalCompositeOperation = 'source-over';
+
+      lastX = x;
+      lastY = y;
     });
+
+    const audio = document.getElementById('ambient');
+    const startButton = document.getElementById('startButton');
 
     startButton.addEventListener('click', () => {
       audio.play().catch(() => {});
