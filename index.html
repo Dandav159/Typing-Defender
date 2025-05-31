@@ -2,73 +2,73 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Koi Pond</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Koi Pond Demo</title>
   <style>
-    body {
+    html, body {
       margin: 0;
       background: #e0f7fa;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
       overflow: hidden;
     }
 
     svg {
-      width: 100%;
-      height: 100%;
+      width: 100vw;
+      height: 100vh;
+      display: block;
     }
 
-    .fish {
-      transform-origin: center;
-      animation: swim 10s infinite linear;
+    .koi-body {
+      fill: #fff6e5;
+      stroke: #f26522;
+      stroke-width: 2;
     }
 
-    @keyframes swim {
-      0% {
-        transform: translate(0, 0) rotate(0deg);
-      }
-      50% {
-        transform: translate(100px, -30px) rotate(10deg);
-      }
-      100% {
-        transform: translate(0, 0) rotate(0deg);
-      }
+    .koi-markings {
+      fill: #f26522;
     }
 
-    .ripple {
-      animation: ripple 6s infinite;
-      transform-origin: center;
-    }
-
-    @keyframes ripple {
-      0% { r: 40; opacity: 0.2; }
-      100% { r: 60; opacity: 0; }
+    .koi-eye {
+      fill: #333;
     }
   </style>
 </head>
 <body>
-  <svg viewBox="0 0 800 600" preserveAspectRatio="xMidYMid meet">
-    <!-- Pond Base -->
-    <ellipse cx="400" cy="300" rx="350" ry="250" fill="#a2d4d9" />
+<svg id="pond" viewBox="0 0 800 600" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background water -->
+  <ellipse cx="400" cy="300" rx="400" ry="300" fill="#a2d4d9" />
 
-    <!-- Ripples -->
-    <circle class="ripple" cx="400" cy="300" r="40" stroke="#ffffff99" stroke-width="2" fill="none" />
-    
-    <!-- Koi Fish 1 -->
-    <g class="fish" style="animation-delay: 0s;">
-      <ellipse cx="300" cy="250" rx="20" ry="8" fill="#ff6f61" />
-      <polygon points="280,250 290,245 290,255" fill="#ff6f61" />
-      <circle cx="310" cy="250" r="2" fill="#000" />
-    </g>
+  <!-- Koi fish group -->
+  <g id="koi" transform="translate(100,100)">
+    <!-- Body -->
+    <ellipse class="koi-body" cx="0" cy="0" rx="30" ry="12" />
+    <!-- Marking -->
+    <ellipse class="koi-markings" cx="-5" cy="-3" rx="7" ry="5" />
+    <ellipse class="koi-markings" cx="8" cy="2" rx="5" ry="3" />
+    <!-- Tail -->
+    <polygon points="-35,0 -45,-10 -45,10" fill="#f26522">
+      <animateTransform attributeName="transform" attributeType="XML"
+        type="rotate" values="-10;10;-10" dur="1.5s" repeatCount="indefinite"
+        additive="sum" />
+    </polygon>
+    <!-- Eye -->
+    <circle class="koi-eye" cx="15" cy="-2" r="2" />
+  </g>
+</svg>
 
-    <!-- Koi Fish 2 -->
-    <g class="fish" style="animation-delay: 2s;">
-      <ellipse cx="500" cy="350" rx="18" ry="7" fill="#f4d35e" />
-      <polygon points="482,350 490,345 490,355" fill="#f4d35e" />
-      <circle cx="510" cy="350" r="2" fill="#000" />
-    </g>
-  </svg>
+<script>
+  const koi = document.getElementById("koi");
+  let t = 0;
+
+  function swim() {
+    t += 0.01;
+    const radius = 120;
+    const x = 400 + Math.cos(t) * radius;
+    const y = 300 + Math.sin(t * 1.2) * radius * 0.6;
+
+    koi.setAttribute("transform", `translate(${x}, ${y}) rotate(${Math.cos(t) * 20})`);
+    requestAnimationFrame(swim);
+  }
+
+  swim();
+</script>
 </body>
 </html>
