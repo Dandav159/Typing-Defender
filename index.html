@@ -1,131 +1,131 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>KeyQuest: Visual Labyrinth</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Balance Bubbles</title>
   <style>
     body {
       margin: 0;
-      background-color: #1a1a1a;
-      color: #eee;
-      font-family: monospace;
+      font-family: sans-serif;
+      background: #1e1e2f;
+      color: white;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
       height: 100vh;
+      overflow: hidden;
     }
 
-    #game {
-      display: grid;
-      grid-template-columns: repeat(10, 40px);
-      grid-template-rows: repeat(10, 40px);
-      gap: 2px;
+    #game-area {
+      position: relative;
+      width: 300px;
+      height: 500px;
+      background: #2e2e3f;
+      border: 4px solid #444;
+      overflow: hidden;
     }
 
-    .cell {
-      width: 40px;
-      height: 40px;
-      background-color: #333;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border-radius: 4px;
+    .bubble {
+      position: absolute;
+      border-radius: 50%;
     }
 
-    .player {
-      background-color: #4caf50;
+    #beam {
+      position: absolute;
+      bottom: 0;
+      left: 50%;
+      width: 200px;
+      height: 10px;
+      background: #888;
+      transform: translateX(-50%) rotate(0deg);
+      transform-origin: center center;
+      transition: transform 0.1s linear;
     }
 
-    .goal {
-      background-color: gold;
-    }
-
-    .wall {
-      background-color: #555;
-    }
-
-    h1 {
-      margin-bottom: 20px;
+    #score-display {
+      margin-top: 10px;
+      font-size: 18px;
     }
   </style>
 </head>
 <body>
-  <h1>🧭 KeyQuest: Visual Labyrinth</h1>
-  <div id="game"></div>
+  <h1>⚖️ Balance Bubbles</h1>
+  <div id="score-display">Score: 0</div>
+  <div id="game-area">
+    <div id="beam"></div>
+  </div>
 
   <script>
-    const gridSize = 10;
-    const game = document.getElementById("game");
-    const cells = [];
-    const player = { x: 0, y: 0 };
-    const goal = { x: 9, y: 9 };
-    const walls = new Set();
+    const gameArea = document.getElementById("game-area");
+    const beam = document.getElementById("beam");
+    const scoreDisplay = document.getElementById("score-display");
+    let bubbles = [];
+    let balance = 0;
+    let score = 0;
 
-    function posKey(x, y) {
-      return `${x},${y}`;
+    function spawnBubble() {
+      const bubble = document.createElement("div");
+      bubble.className = "bubble";
+      const side = Math.random() > 0.5 ? 'left' : 'right';
+      const x = side === 'left' ? 90 : 180;
+      const y = -30;
+      const weight = Math.floor(Math.random() * 3) + 1;
+      const size = 20 + weight * 5;
+      bubble.style.width = `${size}px`;
+      bubble.style.height = `${size}px`;
+      bubble.style.left = `${x}px`;
+      bubble.style.background = weight === 1 ? 'lightblue' : weight === 2 ? 'deepskyblue' : 'dodgerblue';
+      bubble.dataset.side = side;
+      bubble.dataset.weight = weight;
+      bubble.style.top = `${y}px`;
+      gameArea.appendChild(bubble);
+      bubbles.push({ el: bubble, x, y, weight, side });
     }
 
-    function createGrid() {
-      for (let y = 0; y < gridSize; y++) {
-        for (let x = 0; x < gridSize; x++) {
-          const cell = document.createElement("div");
-          cell.classList.add("cell");
-          game.appendChild(cell);
-          cells.push({ x, y, element: cell });
+    function updateBubbles() {
+      bubbles.forEach((b, i) => {
+        b.y += 2;
+        b.el.style.top = `${b.y}px`;
 
-          if (Math.random() < 0.2 && !(x === 0 && y === 0) && !(x === goal.x && y === goal.y)) {
-            walls.add(posKey(x, y));
-          }
-        }
-      }
-    }
-
-    function render() {
-      cells.forEach(cell => {
-        const key = posKey(cell.x, cell.y);
-        cell.element.className = "cell";
-
-        if (walls.has(key)) {
-          cell.element.classList.add("wall");
-        } else {
-          if (cell.x === player.x && cell.y === player.y) {
-            cell.element.classList.add("player");
-          }
-          if (cell.x === goal.x && cell.y === goal.y) {
-            cell.element.classList.add("goal");
-          }
+        if (b.y > 460) {
+          balance += b.side === 'left' ? -b.weight : b.weight;
+          b.el.remove();
+          bubbles.splice(i, 1);
+          updateBeam();
         }
       });
     }
 
-    function movePlayer(dx, dy) {
-      const newX = player.x + dx;
-      const newY = player.y + dy;
-      if (newX >= 0 && newX < gridSize && newY >= 0 && newY < gridSize) {
-        if (!walls.has(posKey(newX, newY))) {
-          player.x = newX;
-          player.y = newY;
-          render();
-          if (player.x === goal.x && player.y === goal.y) {
-            setTimeout(() => alert("🎉 You reached the goal!"), 10);
-          }
-        }
+    function updateBeam() {
+      const tilt = Math.max(-20, Math.min(20, balance * 2));
+      beam.style.transform = `translateX(-50%) rotate(${tilt}deg)`;
+
+      if (Math.abs(balance) >= 10) {
+        alert("💥 You lost balance! Final Score: " + score);
+        location.reload();
       }
     }
 
+    function gameLoop() {
+      spawnBubble();
+      score++;
+      scoreDisplay.textContent = `Score: ${score}`;
+    }
+
+    setInterval(gameLoop, 1000);
+    setInterval(updateBubbles, 30);
+
     document.addEventListener("keydown", (e) => {
-      switch (e.key.toLowerCase()) {
-        case "w": movePlayer(0, -1); break;
-        case "s": movePlayer(0, 1); break;
-        case "a": movePlayer(-1, 0); break;
-        case "d": movePlayer(1, 0); break;
+      if (e.key === "ArrowLeft") {
+        balance--;
+        updateBeam();
+      } else if (e.key === "ArrowRight") {
+        balance++;
+        updateBeam();
       }
     });
-
-    createGrid();
-    render();
   </script>
 </body>
 </html>
