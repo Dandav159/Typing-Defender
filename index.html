@@ -4,147 +4,40 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>DFA Challenge</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
   <style>
-    * {
-      box-sizing: border-box;
-    }
-    body {
-      background: #0f0f0f;
-      color: #f0f0f0;
-      font-family: 'Inter', sans-serif;
-      padding: 20px;
-      margin: 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-    h1 {
-      font-size: 2.2rem;
-      color: #00d1b2;
-      margin-bottom: 10px;
-    }
-    #mission, #alphabet {
-      font-size: 1.1rem;
-      margin: 6px 0;
-      text-align: center;
-    }
-    #mission strong {
-      color: #7fffd4;
-    }
-    button.primary {
-      background: #00aaff;
-      color: white;
-      border: none;
-      padding: 10px 16px;
-      font-size: 1rem;
-      border-radius: 6px;
-      margin-top: 10px;
-      cursor: pointer;
-      transition: background 0.3s ease;
-    }
-    button.primary:hover {
-      background: #008ecc;
-    }
-    .section {
-      background: #1e1e1e;
-      border: 1px solid #333;
-      padding: 20px;
-      margin-top: 20px;
-      border-radius: 12px;
-      width: 100%;
-      max-width: 700px;
-      box-shadow: 0 2px 12px rgba(0,0,0,0.3);
-    }
-    .section h3 {
-      color: #ffd369;
-      margin-top: 0;
-    }
-    .form-group {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      margin-top: 15px;
-    }
-    .input-box, select, textarea {
-      width: 100%;
-      padding: 10px;
-      background: #2c2c2c;
-      color: #f0f0f0;
-      border: 1px solid #444;
-      border-radius: 5px;
-      font-size: 1rem;
-    }
-    label {
-      font-weight: 600;
-      margin-top: 10px;
-    }
-    .button-group {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      margin-top: 10px;
-    }
-    .removable {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      background: #242424;
-      padding: 8px 12px;
-      border-radius: 6px;
-      margin-top: 6px;
-    }
-    .removable button {
-      background: crimson;
-      border: none;
-      color: white;
-      border-radius: 4px;
-      padding: 4px 10px;
-      font-size: 0.9rem;
-      cursor: pointer;
-    }
-    .test-case {
-      background: #252525;
-      border-left: 4px solid #444;
-      padding: 10px;
-      margin: 8px 0;
-      border-radius: 5px;
-      font-family: monospace;
-    }
+    body { background: #111; color: #eee; font-family: sans-serif; padding: 20px; }
+    h1 { font-size: 24px; }
+    .section { background: #1d1d1d; border: 1px solid #333; padding: 10px; margin: 10px 0; border-radius: 5px; }
+    .stack-view { background: #222; padding: 10px; font-family: monospace; margin-top: 10px; }
+    .input-box, select, button, textarea { margin-top: 5px; display: block; width: 100%; padding: 5px; background: #333; color: #eee; border: none; border-radius: 3px; }
+    button:hover { background: #555; cursor: pointer; }
+    .hidden { display: none; }
+    .removable { display: flex; justify-content: space-between; align-items: center; }
+    .removable button { margin-left: 10px; background: crimson; border: none; color: white; border-radius: 3px; padding: 2px 6px; cursor: pointer; }
+    .test-case { margin: 5px 0; padding: 5px; background: #222; border-radius: 3px; }
   </style>
 </head>
 <body>
-  <h1>🧠 DFA Challenge</h1>
+  <h1>DFA Challenge</h1>
   <div id="mission"></div>
   <div id="alphabet"></div>
-  <button class="primary" onclick="resetChallenge()">🔁 New Mission</button>
+  <button onclick="resetChallenge()">🔁 New Mission</button>
 
   <div class="section">
     <h3>Build DFA</h3>
+    <input id="state-name" placeholder="State name (e.g. q0)" />
+    <button onclick="addState()">Add State</button>
+    <div id="states-list"></div>
 
-    <div class="form-group">
-      <input id="state-name" class="input-box" placeholder="State name (e.g. q0)" />
-      <button class="primary" onclick="addState()">Add State</button>
-      <div id="states-list"></div>
-    </div>
+    <select id="from-state"></select>
+    <input id="input-symbol" placeholder="Input (e.g. a, b)" />
+    <select id="to-state"></select>
+    <button onclick="addTransition()">Add Transition</button>
+    <div id="transitions-list"></div>
 
-    <div class="form-group">
-      <select id="from-state" class="input-box"></select>
-      <input id="input-symbol" class="input-box" placeholder="Input symbol (e.g. a, b)" />
-      <select id="to-state" class="input-box"></select>
-      <button class="primary" onclick="addTransition()">Add Transition</button>
-      <div id="transitions-list"></div>
-    </div>
-
-    <div class="form-group">
-      <label for="start-state">Start State:</label>
-      <select id="start-state" class="input-box"></select>
-
-      <label for="accept-states">Accept States (comma separated):</label>
-      <input id="accept-states" class="input-box" placeholder="e.g. q1,q2" />
-    </div>
-
-    <button class="primary" onclick="autoTestDFA()">Run Automated Tests</button>
+    <label>Start State:<select id="start-state"></select></label>
+    <label>Accept States:<input id="accept-states" placeholder="e.g. q1,q2" /></label>
+    <button onclick="autoTestDFA()">Run Automated Tests</button>
     <div id="result"></div>
     <div id="test-results"></div>
   </div>
@@ -152,19 +45,19 @@
   <script>
     const alphabets = [['a', 'b'], ['a', 'b', 'c'], ['0', '1']];
     const templates = [
-      (a) => { const x = r(a); return { rule: `start with '<strong>${x}</strong>'`, test: s => s.startsWith(x) }; },
-      (a) => { const x = r(a); return { rule: `end with '<strong>${x}</strong>'`, test: s => s.endsWith(x) }; },
-      (a) => { const x = r(a); return { rule: `have even number of '<strong>${x}</strong>'`, test: s => s.split('').filter(c => c === x).length % 2 === 0 }; },
-      (a) => { const x = r(a); return { rule: `have odd number of '<strong>${x}</strong>'`, test: s => s.split('').filter(c => c === x).length % 2 === 1 }; },
-      (a) => { const x = r(a); return { rule: `contain '<strong>${x}</strong>' exactly once`, test: s => s.split('').filter(c => c === x).length === 1 }; },
-      (a) => { const x = r(a), y = r(a); return { rule: `start with '<strong>${x}</strong>' and end with '<strong>${y}</strong>'`, test: s => s.startsWith(x) && s.endsWith(y) }; },
-      (a) => { const sub = a.join('').slice(0, 2); return { rule: `contain '<strong>${sub}</strong>' as a substring`, test: s => s.includes(sub) }; },
-      (_) => ({ rule: `be exactly <strong>3</strong> characters long`, test: s => s.length === 3 }),
-      (a) => { const x = r(a); return { rule: `not contain '<strong>${x}</strong>'`, test: s => !s.includes(x) }; },
-      (a) => { const x = a[0]; return { rule: `contain '<strong>${x}</strong>' at least twice`, test: s => s.split('').filter(c => c === x).length >= 2 }; },
-      (_) => ({ rule: `have length divisible by <strong>2</strong>`, test: s => s.length % 2 === 0 }),
-      (_) => ({ rule: `have length divisible by <strong>3</strong>`, test: s => s.length % 3 === 0 }),
-      (a) => { const x = r(a); return { rule: `start and end with '<strong>${x}</strong>'`, test: s => s.startsWith(x) && s.endsWith(x) }; }
+      (a) => { const x = r(a); return { rule: `start with '${x}'`, test: s => s.startsWith(x) }; },
+      (a) => { const x = r(a); return { rule: `end with '${x}'`, test: s => s.endsWith(x) }; },
+      (a) => { const x = r(a); return { rule: `have even number of '${x}'`, test: s => s.split('').filter(c => c === x).length % 2 === 0 }; },
+      (a) => { const x = r(a); return { rule: `have odd number of '${x}'`, test: s => s.split('').filter(c => c === x).length % 2 === 1 }; },
+      (a) => { const x = r(a); return { rule: `contain '${x}' exactly once`, test: s => s.split('').filter(c => c === x).length === 1 }; },
+      (a) => { const x = r(a), y = r(a); return { rule: `start with '${x}' and end with '${y}'`, test: s => s.startsWith(x) && s.endsWith(y) }; },
+      (a) => { const sub = a.join('').slice(0, 2); return { rule: `contain '${sub}' as a substring`, test: s => s.includes(sub) }; },
+      (_) => ({ rule: `be exactly 3 characters long`, test: s => s.length === 3 }),
+      (a) => { const x = r(a); return { rule: `not contain '${x}'`, test: s => !s.includes(x) }; },
+      (a) => { const x = a[0]; return { rule: `contain '${x}' at least twice`, test: s => s.split('').filter(c => c === x).length >= 2 }; },
+      (_) => ({ rule: `have length divisible by 2`, test: s => s.length % 2 === 0 }),
+      (_) => ({ rule: `have length divisible by 3`, test: s => s.length % 3 === 0 }),
+      (a) => { const x = r(a); return { rule: `start and end with '${x}'`, test: s => s.startsWith(x) && s.endsWith(x) }; }
     ];
 
     let currentMission, currentAlphabet, states = new Set(), transitions = {};
@@ -182,7 +75,7 @@
 
       currentAlphabet = r(alphabets);
       currentMission = r(templates)(currentAlphabet);
-      document.getElementById('mission').innerHTML = `Mission: Create a DFA that will ${currentMission.rule}`;
+      document.getElementById('mission').innerText = `Mission: Create a DFA that will ${currentMission.rule}`;
       document.getElementById('alphabet').innerText = `Alphabet: { ${currentAlphabet.join(', ')} }`;
       updateDropdowns();
     }
