@@ -120,14 +120,16 @@
   <button class="primary" onclick="resetChallenge()">🔁 New Mission</button>
 
   <div class="section">
-    <h3>Build DFA</h3>
-
+    <h3>1. Add/Remove States</h3>
     <div class="form-group">
       <input id="state-name" class="input-box" placeholder="State name (e.g. q0)" />
       <button class="primary" onclick="addState()">Add State</button>
       <div id="states-list"></div>
     </div>
+  </div>
 
+  <div class="section">
+    <h3>2. Add/Remove Transitions</h3>
     <div class="form-group">
       <select id="from-state" class="input-box"></select>
       <input id="input-symbol" class="input-box" placeholder="Input symbol (e.g. a, b)" />
@@ -135,7 +137,10 @@
       <button class="primary" onclick="addTransition()">Add Transition</button>
       <div id="transitions-list"></div>
     </div>
+  </div>
 
+  <div class="section">
+    <h3>3. Set Start and Accept States</h3>
     <div class="form-group">
       <label for="start-state">Start State:</label>
       <select id="start-state" class="input-box"></select>
@@ -143,12 +148,14 @@
       <label for="accept-states">Accept States (comma separated):</label>
       <input id="accept-states" class="input-box" placeholder="e.g. q1,q2" />
     </div>
+  </div>
 
+  <div class="section">
+    <h3>4. Run Tests</h3>
     <button class="primary" onclick="autoTestDFA()">Run Automated Tests</button>
     <div id="result"></div>
     <div id="test-results"></div>
   </div>
-
   <script>
     const alphabets = [['a', 'b'], ['a', 'b', 'c'], ['0', '1']];
     const templates = [
